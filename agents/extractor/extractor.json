@@ -1,11 +1,19 @@
 {
   "name": "extractor",
-  "description": "TODO: what this agent decides or drafts.",
+  "description": "Extracts structured financial metrics from uploaded documents.",
   "instruction": { "$file": "instruction.md" },
-  // toolsets: POD SKILLS SPEECH SUBAGENTS TODO USER_INTERACTION WEB_SEARCH WORKSPACE_CLI
   "toolsets": ["POD"],
-  "visibility": "POD",   // PERSONAL | POD | PUBLIC | RESTRICTED
-  // agent_runtime omitted -> the system runtime profile (system:lemma). Add it to pin a specific model.
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "revenue": {},
+      "ebitda": {},
+      "yoy_growth": {},
+      "customer_concentration": {},
+      "legal_risks": {}
+    }
+  },
+  "visibility": "POD",   
   "permissions": {
     "grants": [
       {
