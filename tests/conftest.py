@@ -1,4 +1,5 @@
 import pytest
+from backend.config import get_settings
 
 @pytest.fixture(autouse=True)
 def clear_env_lemma_keys(monkeypatch):
@@ -9,3 +10,4 @@ def clear_env_lemma_keys(monkeypatch):
     monkeypatch.delenv("LEMMA_API_KEY", raising=False)
     monkeypatch.delenv("LEMMA_POD_ID", raising=False)
     monkeypatch.delenv("LEMMA_TOKEN", raising=False)
+    get_settings.cache_clear()
