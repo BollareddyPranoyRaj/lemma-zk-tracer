@@ -1,4 +1,10 @@
+import os
+import sys
 import time
+
+# Ensure project root is in sys.path so backend imports work seamlessly
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import httpx
 import streamlit as st
 from backend.crypto import verify_metric_proof, compute_source_hash
