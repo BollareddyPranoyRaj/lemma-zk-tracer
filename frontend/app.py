@@ -220,7 +220,7 @@ with col_left:
                 with st.spinner("🚀 Uploading and Indexing PDF into local Document Store..."):
                     try:
                         files = {"file": (uploaded_file.name, uploaded_file.getvalue(), "application/pdf")}
-                        resp = httpx.post(f"{BACKEND_URL}/api/v1/ingest", files=files, timeout=60.0)
+                        resp = httpx.post(f"{BACKEND_URL}/api/v1/ingest", files=files, timeout=240.0)
                         
                         if resp.status_code == 200:
                             data = resp.json()
