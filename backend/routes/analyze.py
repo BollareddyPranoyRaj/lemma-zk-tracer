@@ -137,6 +137,36 @@ async def analyze_document(
                 drafter = DrafterAgent()
                 memo = await drafter.draft(document_id, filename, metrics, screen_result)
 
+        # ── 4. Record Metrics to Lemma Platform ───────────────────────────────
+        lemma_token = get_settings().lemma_api_key or os.getenv("LEMMA_TOKEN")
+        lemma_pod_id = os.getenv("LEMMA_POD_ID")
+        if lemma_token and lemma_pod_id:
+            try:
+                from datetime import datetime, timezone
+                from lemma_sdk import Pod
+                log.info("Recording metrics to Lemma Platform Pod...", pod_id=lemma_pod_id)
+                pod = Pod(pod_id=lemma_pod_id, token=lemma_token)
+                
+                records = []
+                for name, item in metrics.model_dump().items():
+                    if item and item.get("value") is not None:
+                        records.append({
+                            "document_id": document_id,
+                            "filename": filename,
+                            "metric_name": name,
+                            "value": str(item["value"]),
+                            "source_text": str(item["source_text"]),
+                            "doc_hash": str(item["doc_hash"]),
+                            "source_hash": str(item["source_hash"]),
+                            "verification_hash": str(item["verification_hash"]),
+                            "timestamp": datetime.now(timezone.utc).isoformat()
+                        })
+                if records:
+                    pod.records.bulk_create("due_diligence_traces", records, upsert=True)
+                    log.info("Successfully recorded ZK metrics to Lemma Pod table 'due_diligence_traces'", count=len(records))
+            except Exception as lemma_exc:
+                log.warning("Failed to record metrics to Lemma Pod", error=str(lemma_exc))
+
     except Exception as exc:
         # Record error status on active span
         span = trace.get_current_span()
