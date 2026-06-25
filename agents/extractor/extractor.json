@@ -6,12 +6,82 @@
   "output_schema": {
     "type": "object",
     "properties": {
-      "revenue": {},
-      "ebitda": {},
-      "yoy_growth": {},
-      "customer_concentration": {},
-      "legal_risks": {}
-    }
+      "revenue": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": ["string", "null"]
+          },
+          "source_text": {
+            "type": ["string", "null"]
+          },
+          "source_hash": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["value", "source_text", "source_hash"]
+      },
+      "ebitda": {"type": "object",
+        "properties": {
+          "value": {
+            "type": ["string", "null"]
+          },
+          "source_text": {
+            "type": ["string", "null"]
+          },
+          "source_hash": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["value", "source_text", "source_hash"]},
+      "yoy_growth": {"type": "object",
+        "properties": {
+          "value": {
+            "type": ["string", "null"]
+          },
+          "source_text": {
+            "type": ["string", "null"]
+          },
+          "source_hash": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["value", "source_text", "source_hash"]},
+      "customer_concentration": {"type": "object",
+        "properties": {
+          "value": {
+            "type": ["string", "null"]
+          },
+          "source_text": {
+            "type": ["string", "null"]
+          },
+          "source_hash": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["value", "source_text", "source_hash"]},
+      "legal_risks": {"type": "object",
+        "properties": {
+          "value": {
+            "type": ["string", "null"]
+          },
+          "source_text": {
+            "type": ["string", "null"]
+          },
+          "source_hash": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["value", "source_text", "source_hash"]
+      }
+    },
+    "required": [
+      "revenue",
+      "ebitda",
+      "yoy_growth",
+      "customer_concentration",
+      "legal_risks"
+    ]
   },
   "visibility": "POD",   
   "permissions": {
