@@ -9,7 +9,7 @@ Extract structured financial metrics from uploaded documents. Identify Revenue, 
 ## Pod resources you use
 
 Read:
-- `/pod/documents/` — uploaded financial documents.
+- `/documents/` — uploaded financial documents.
 
 Write:
 - None. This agent is read-only.
