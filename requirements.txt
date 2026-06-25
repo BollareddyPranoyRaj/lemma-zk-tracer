@@ -1,0 +1,46 @@
+# ─── Web Framework ────────────────────────────────────────────────────────────
+fastapi>=0.115.6
+uvicorn[standard]>=0.32.1
+python-multipart>=0.0.12          # multipart/form-data file uploads
+
+# ─── Data Validation ──────────────────────────────────────────────────────────
+pydantic>=2.10.3
+pydantic-settings>=2.6.1
+
+# ─── PDF Parsing ──────────────────────────────────────────────────────────────
+pdfplumber>=0.11.4                # best-in-class PDF text + layout extraction
+pypdf>=5.1.0                      # fallback / metadata extraction
+
+# ─── LLM / AI ─────────────────────────────────────────────────────────────────
+openai>=1.58.1                    # GPT-4o for metric extraction
+# litellm removed — causes httpx version conflicts; direct openai suffices for hackathon
+
+# ─── Cryptographic Provenance Layer ───────────────────────────────────────────
+# Standard crypto (HMAC-SHA256 provenance; Poseidon as pure-Python in crypto.py)
+cryptography>=43.0.3
+
+# ─── Document Store (in-process vector store) ─────────────────────────────────
+chromadb>=0.5.20                  # local persistent vector store (doc chunks)
+sentence-transformers>=3.3.1      # embeddings for semantic chunk retrieval
+
+# ─── Observability / Tracing ──────────────────────────────────────────────────
+opentelemetry-api>=1.29.0
+opentelemetry-sdk>=1.29.0
+opentelemetry-instrumentation-fastapi>=0.50b0
+opentelemetry-exporter-otlp-proto-http>=1.29.0
+
+# ─── Testing ──────────────────────────────────────────────────────────────────
+pytest>=8.3.4
+pytest-asyncio>=0.24.0
+httpx>=0.28.1                     # async test client for FastAPI TestClient
+
+# ─── Utilities ────────────────────────────────────────────────────────────────
+python-dotenv>=1.0.1
+aiofiles>=24.1.0
+structlog>=24.4.0                 # structured JSON logging
+tenacity>=9.0.0                   # retry logic for LLM calls
+tiktoken>=0.8.0                   # token counting for chunking budget
+
+# ─── Frontend (Phase 4) ───────────────────────────────────────────────────────
+streamlit>=1.40.2
+lemma-sdk>=0.5.0
