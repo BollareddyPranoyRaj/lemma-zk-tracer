@@ -1,8 +1,7 @@
 import streamlit as st
-
-from components.upload import upload_pdf
-from components.dashboard import show_dashboard
-from components.loader import processing_animation
+from frontend.components.upload import upload_pdf
+from frontend.components.dashboard import show_dashboard
+from frontend.components.loader import processing_animation
 from data.mock_data import mock_data
 
 # ---------------- Page Config ----------------

@@ -1,6 +1,5 @@
 import streamlit as st
-from components.verification import verify_metric
-
+from frontend.components.verification import verify_metric
 
 def show_memo(data):
 
