@@ -1,0 +1,80 @@
+/* ---------- Global ---------- */
+.stApp {
+    background: linear-gradient(135deg, #0b1120, #111827);
+    color: #f8fafc;
+}
+
+/* ---------- Hide Streamlit Header ---------- */
+header {
+    visibility: hidden;
+}
+
+footer {
+    visibility: hidden;
+}
+
+/* ---------- Main Container ---------- */
+.block-container {
+    padding-top: 2rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+}
+
+/* ---------- Title ---------- */
+.title {
+    text-align: center;
+    font-size: 42px;
+    font-weight: 700;
+    color: white;
+}
+
+.subtitle {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 18px;
+    margin-bottom: 30px;
+}
+
+/* ---------- Metric Cards ---------- */
+div[data-testid="metric-container"] {
+    background: rgba(30,41,59,0.85);
+    border: 1px solid #334155;
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0px 8px 20px rgba(0,0,0,.35);
+}
+
+/* ---------- Buttons ---------- */
+.stButton > button {
+    width: 100%;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(90deg,#2563eb,#3b82f6);
+    color: white;
+    font-weight: bold;
+    border: none;
+}
+
+.stButton > button:hover {
+    background: linear-gradient(90deg,#1d4ed8,#2563eb);
+}
+
+/* ---------- Sidebar ---------- */
+section[data-testid="stSidebar"] {
+    background: #111827;
+}
+
+/* ---------- Expanders ---------- */
+.streamlit-expanderHeader {
+    font-weight: bold;
+}
+
+/* ---------- Success ---------- */
+.stSuccess {
+    border-radius: 12px;
+}
+
+/* ---------- Info ---------- */
+.stInfo {
+    border-radius: 12px;
+}
