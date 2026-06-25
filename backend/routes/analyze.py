@@ -64,6 +64,9 @@ async def analyze_document(
     document_id = body.document_id
     t0 = time.perf_counter()
 
+    from opentelemetry import trace
+    tracer = trace.get_tracer("backend.routes.analyze")
+
     log.info("Analysis request received", document_id=document_id, request_id=request_id)
 
     # ── 1. Check Document Existence ──────────────────────────────────────────
@@ -110,22 +113,37 @@ async def analyze_document(
 
     # ── 3. Run Pipeline ───────────────────────────────────────────────────────
     try:
-        # A. Extractor Agent
-        log.info("Running Extractor Agent", document_id=document_id, request_id=request_id)
-        extractor = ExtractorAgent(store)
-        metrics = await extractor.extract(document_id, doc_hash)
+        with tracer.start_as_current_span("analyze_pipeline") as pipeline_span:
+            pipeline_span.set_attribute("document_id", document_id)
+            pipeline_span.set_attribute("filename", filename)
 
-        # B. Screener Agent
-        log.info("Running Screener Agent", document_id=document_id, request_id=request_id)
-        screener = ScreenerAgent()
-        screen_result = screener.screen(metrics, body.mandate)
+            # A. Extractor Agent
+            with tracer.start_as_current_span("extractor_agent"):
+                log.info("Running Extractor Agent", document_id=document_id, request_id=request_id)
+                extractor = ExtractorAgent(store)
+                metrics = await extractor.extract(document_id, doc_hash)
 
-        # C. Drafter Agent
-        log.info("Running Drafter Agent", document_id=document_id, request_id=request_id)
-        drafter = DrafterAgent()
-        memo = await drafter.draft(document_id, filename, metrics, screen_result)
+            # B. Screener Agent
+            with tracer.start_as_current_span("screener_agent") as screener_span:
+                log.info("Running Screener Agent", document_id=document_id, request_id=request_id)
+                screener = ScreenerAgent()
+                screen_result = screener.screen(metrics, body.mandate)
+                screener_span.set_attribute("decision", screen_result.decision.value)
+                pipeline_span.set_attribute("decision", screen_result.decision.value)
+
+            # C. Drafter Agent
+            with tracer.start_as_current_span("drafter_agent"):
+                log.info("Running Drafter Agent", document_id=document_id, request_id=request_id)
+                drafter = DrafterAgent()
+                memo = await drafter.draft(document_id, filename, metrics, screen_result)
 
     except Exception as exc:
+        # Record error status on active span
+        span = trace.get_current_span()
+        if span.is_recording():
+            span.set_status(trace.StatusCode.ERROR, str(exc))
+            span.record_exception(exc)
+
         log.error("Pipeline agent execution failed", exc_info=exc, request_id=request_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
