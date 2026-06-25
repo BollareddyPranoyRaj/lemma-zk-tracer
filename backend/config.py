@@ -33,6 +33,7 @@ class Settings(BaseSettings):
 
     # ── Lemma / Observability ─────────────────────────────────────────────────
     lemma_api_key: str = Field(default="", description="Lemma API key for telemetry")
+    lemma_pod_id: str = Field(default="", description="Lemma Pod ID")
     otlp_endpoint: str = Field(
         default="http://localhost:4318",
         description="OpenTelemetry collector OTLP/HTTP endpoint",
