@@ -58,33 +58,35 @@ async def lifespan(app: FastAPI):
     log.info("Starting up", app=settings.app_name, version=settings.app_version)
 
     # Setup OpenTelemetry tracing
-    try:
-        from opentelemetry import trace
-        from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export import BatchSpanProcessor
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-        from opentelemetry.sdk.resources import Resource
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    if not getattr(app.state, "otel_initialized", False):
+        try:
+            from opentelemetry import trace
+            from opentelemetry.sdk.trace import TracerProvider
+            from opentelemetry.sdk.trace.export import BatchSpanProcessor
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+            from opentelemetry.sdk.resources import Resource
+            from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-        resource = Resource.create(attributes={
-            "service.name": settings.app_name,
-            "service.version": settings.app_version,
-        })
-        provider = TracerProvider(resource=resource)
-        
-        endpoint_url = settings.otlp_endpoint
-        if not endpoint_url.endswith("/v1/traces"):
-            endpoint_url = f"{endpoint_url.rstrip('/')}/v1/traces"
+            resource = Resource.create(attributes={
+                "service.name": settings.app_name,
+                "service.version": settings.app_version,
+            })
+            provider = TracerProvider(resource=resource)
             
-        exporter = OTLPSpanExporter(endpoint=endpoint_url)
-        processor = BatchSpanProcessor(exporter)
-        provider.add_span_processor(processor)
-        trace.set_tracer_provider(provider)
-        
-        FastAPIInstrumentor().instrument_app(app)
-        log.info("OpenTelemetry instrumentation successfully initialized", endpoint=endpoint_url)
-    except Exception as e:
-        log.warning("Failed to initialize OpenTelemetry", error=str(e))
+            endpoint_url = settings.otlp_endpoint
+            if not endpoint_url.endswith("/v1/traces"):
+                endpoint_url = f"{endpoint_url.rstrip('/')}/v1/traces"
+                
+            exporter = OTLPSpanExporter(endpoint=endpoint_url)
+            processor = BatchSpanProcessor(exporter)
+            provider.add_span_processor(processor)
+            trace.set_tracer_provider(provider)
+            
+            FastAPIInstrumentor().instrument_app(app)
+            app.state.otel_initialized = True
+            log.info("OpenTelemetry instrumentation successfully initialized", endpoint=endpoint_url)
+        except Exception as e:
+            log.warning("Failed to initialize OpenTelemetry", error=str(e))
 
     app.state.document_store = await DocumentStore.create()
     log.info("DocumentStore ready")
