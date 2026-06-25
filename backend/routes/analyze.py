@@ -138,8 +138,9 @@ async def analyze_document(
                 memo = await drafter.draft(document_id, filename, metrics, screen_result)
 
         # ── 4. Record Metrics to Lemma Platform ───────────────────────────────
-        lemma_token = get_settings().lemma_api_key or os.getenv("LEMMA_TOKEN")
-        lemma_pod_id = os.getenv("LEMMA_POD_ID")
+        settings = get_settings()
+        lemma_token = settings.lemma_api_key or os.getenv("LEMMA_TOKEN")
+        lemma_pod_id = os.getenv("LEMMA_POD_ID") or settings.lemma_pod_id
         if lemma_token and lemma_pod_id:
             try:
                 from datetime import datetime, timezone
