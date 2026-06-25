@@ -85,6 +85,6 @@ pytest tests/test_phase1_ingest.py -v
 
 ## Phase Roadmap
 - [x] **Phase 1** — FastAPI scaffolding + PDF ingestion + ChromaDB
-- [ ] **Phase 2** — Multi-agent pipeline (Extractor → Screener → Drafter)
-- [ ] **Phase 3** — Cryptographic provenance (ZK-style verification hashes)
-- [ ] **Phase 4** — Streamlit UI + OpenTelemetry observability
+- [x] **Phase 2** — Multi-agent pipeline (Extractor → Screener → Drafter)
+- [x] **Phase 3** — Cryptographic provenance (ZK-style verification hashes)
+- [x] **Phase 4** — Streamlit UI + OpenTelemetry observability
