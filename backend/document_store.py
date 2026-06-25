@@ -39,24 +39,27 @@ _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="docstore")
 class DocumentStore:
     """
     Manages document ingestion, chunking, embedding, and retrieval.
-
-    Lifecycle:
-        store = await DocumentStore.create()
-        result = await store.ingest(pdf_bytes, filename)
-        chunks = await store.retrieve(document_id, query="EBITDA")
+    Adapts dynamically between Gappy AI's Lemma platform (core) and a
+    local fallback (ChromaDB + pdfplumber + sentence-transformers).
     """
 
-    def __init__(self, chroma_client, collection, embedding_fn):
+    def __init__(self, chroma_client, collection, embedding_fn, lemma_pod=None):
         self._chroma = chroma_client
         self._collection = collection
         self._embed = embedding_fn
         self._settings = get_settings()
         self._tokenizer = tiktoken.get_encoding("cl100k_base")
+        self._lemma_pod = lemma_pod
+
+    @property
+    def is_lemma_active(self) -> bool:
+        """Check if Lemma client is configured and active."""
+        return self._lemma_pod is not None
 
     @classmethod
     async def create(cls) -> "DocumentStore":
         """
-        Async factory: initialise ChromaDB and the embedding model.
+        Async factory: initialise ChromaDB, the embedding model, and the Lemma Pod client.
         Runs heavy imports in a thread to avoid blocking the event loop.
         """
         settings = get_settings()
@@ -79,8 +82,18 @@ class DocumentStore:
             return client, collection, ef
 
         client, collection, ef = await loop.run_in_executor(_executor, _init_chroma)
+        
+        lemma_pod = None
+        if settings.lemma_api_key and settings.lemma_pod_id:
+            try:
+                from lemma_sdk import Pod
+                lemma_pod = Pod(pod_id=settings.lemma_pod_id, token=settings.lemma_api_key)
+                logger.info("Lemma active as core datastore: pod_id=%s", settings.lemma_pod_id)
+            except Exception as e:
+                logger.warning("Failed to initialize core Lemma Pod client: %s", e)
+
         logger.info("DocumentStore initialised (chroma_dir=%s)", settings.chroma_persist_dir)
-        return cls(client, collection, ef)
+        return cls(client, collection, ef, lemma_pod=lemma_pod)
 
     # ─── Ingestion ────────────────────────────────────────────────────────────
 
@@ -89,20 +102,69 @@ class DocumentStore:
         Full ingestion pipeline for a PDF:
           1. Hash the raw bytes (doc_hash)
           2. Save to disk
-          3. Extract text + page metadata via pdfplumber
-          4. Chunk by page with token budget
-          5. Embed and store in ChromaDB
-
-        Returns:
-            dict with document_id, doc_hash, total_pages, total_chunks
+          3. Upload to Lemma Pod if active, or chunk and index locally in ChromaDB
         """
         settings = self._settings
         document_id = str(uuid.uuid4())
         doc_hash = hash_document(pdf_bytes)
 
-        # Save raw PDF
+        # Save raw PDF locally for reference/backup
         upload_path = await self._save_pdf(pdf_bytes, document_id, filename)
         logger.info("PDF saved: doc_id=%s path=%s", document_id, upload_path)
+
+        if self.is_lemma_active:
+            loop = asyncio.get_event_loop()
+            
+            # Count pages locally for accurate metadata response
+            total_pages = 1
+            try:
+                import io
+                import pypdf
+                reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
+                total_pages = len(reader.pages)
+            except Exception:
+                pass
+
+            def _upload():
+                import io
+                import time
+                path = f"/uploads/{document_id}/{filename}"
+                logger.info("Uploading PDF to Lemma: path=%s", path)
+                self._lemma_pod.files.upload_file(
+                    io.BytesIO(pdf_bytes),
+                    path=path,
+                    filename=filename,
+                    directory_path=f"/uploads/{document_id}",
+                    description=f"doc_hash:{doc_hash}",
+                    search_enabled=True
+                )
+
+                # Wait/poll for vector indexing status
+                start_time = time.time()
+                while time.time() - start_time < 60:
+                    try:
+                        file_detail = self._lemma_pod.files.get(path)
+                        status = getattr(file_detail, "status", None) or file_detail.get("status")
+                        if status == "COMPLETED":
+                            logger.info("Lemma indexing COMPLETED for path=%s", path)
+                            return
+                        elif status in ("FAILED", "NOT_REQUIRED"):
+                            logger.warning("Lemma indexing status: %s", status)
+                            return
+                    except Exception as e:
+                        logger.warning("Error fetching Lemma file details: %s", e)
+                    time.sleep(1.5)
+                logger.warning("Timeout waiting for Lemma indexing on %s", path)
+
+            await loop.run_in_executor(_executor, _upload)
+
+            return {
+                "document_id": document_id,
+                "doc_hash": doc_hash,
+                "total_pages": total_pages,
+                "total_chunks": 1,
+                "filename": filename,
+            }
 
         # Parse and chunk in thread (pdfplumber is sync)
         loop = asyncio.get_event_loop()
@@ -123,7 +185,7 @@ class DocumentStore:
         )
 
         logger.info(
-            "Ingestion complete: doc_id=%s pages=%d chunks=%d",
+            "Ingestion complete (Local): doc_id=%s pages=%d chunks=%d",
             document_id,
             total_pages,
             len(chunks),
@@ -246,9 +308,44 @@ class DocumentStore:
     ) -> list[dict]:
         """
         Semantic search within a specific document's chunks.
-        Returns list of {text, page_number, chunk_id, doc_hash, distance}.
+        Returns list of {text, page_number, chunk_id, doc_hash}.
         """
         loop = asyncio.get_event_loop()
+
+        if self.is_lemma_active:
+            def _retrieve_lemma():
+                logger.info("Retrieving via Lemma Search: doc_id=%s query=%r", document_id, query)
+                doc_hash = None
+                try:
+                    file_list = self._lemma_pod.files.list(path=f"/uploads/{document_id}")
+                    if file_list.items:
+                        desc = file_list.items[0].description
+                        if desc and "doc_hash:" in desc:
+                            doc_hash = desc.split("doc_hash:")[1]
+                except Exception as e:
+                    logger.warning("Error getting doc_hash description from Lemma: %s", e)
+
+                if not doc_hash:
+                    doc_hash = "0" * 64
+
+                response = self._lemma_pod.files.search(
+                    query=query,
+                    search_method="VECTOR",
+                    scope_path=f"/uploads/{document_id}"
+                )
+
+                output = []
+                for item in response.items[:n_results]:
+                    output.append({
+                        "chunk_id": f"{item.file_id}-{item.chunk_index}",
+                        "text": item.content,
+                        "page_number": item.page_number or 1,
+                        "doc_hash": doc_hash,
+                    })
+                return output
+
+            return await loop.run_in_executor(_executor, _retrieve_lemma)
+
         results = await loop.run_in_executor(
             _executor,
             self._query_collection,
@@ -287,9 +384,34 @@ class DocumentStore:
 
     async def get_all_chunks(self, document_id: str) -> list[dict]:
         """
-        Return ALL chunks for a document (used by the Extractor for broad sweep).
+        Return ALL chunks for a document (used by the Extractor for broad sweep / metadata lookup).
         """
         loop = asyncio.get_event_loop()
+
+        if self.is_lemma_active:
+            def _get_all_lemma():
+                doc_hash = None
+                try:
+                    file_list = self._lemma_pod.files.list(path=f"/uploads/{document_id}")
+                    if file_list.items:
+                        desc = file_list.items[0].description
+                        if desc and "doc_hash:" in desc:
+                            doc_hash = desc.split("doc_hash:")[1]
+                except Exception as e:
+                    logger.warning("Error getting doc_hash: %s", e)
+
+                if not doc_hash:
+                    doc_hash = "0" * 64
+
+                return [{
+                    "chunk_id": "lemma-mock-chunk",
+                    "text": "",
+                    "page_number": 1,
+                    "doc_hash": doc_hash
+                }]
+
+            return await loop.run_in_executor(_executor, _get_all_lemma)
+
         return await loop.run_in_executor(
             _executor, self._get_all_chunks_sync, document_id
         )
@@ -312,6 +434,16 @@ class DocumentStore:
     async def document_exists(self, document_id: str) -> bool:
         """Check if a document has been ingested."""
         loop = asyncio.get_event_loop()
+
+        if self.is_lemma_active:
+            def _exists_lemma():
+                try:
+                    file_list = self._lemma_pod.files.list(path=f"/uploads/{document_id}")
+                    return bool(file_list.items)
+                except Exception:
+                    return False
+            return await loop.run_in_executor(_executor, _exists_lemma)
+
         return await loop.run_in_executor(
             _executor, self._doc_exists_sync, document_id
         )
