@@ -141,7 +141,7 @@ class DocumentStore:
 
                 # Wait/poll for vector indexing status
                 start_time = time.time()
-                while time.time() - start_time < 60:
+                while time.time() - start_time < 180:
                     try:
                         file_detail = self._lemma_pod.files.get(path)
                         status = getattr(file_detail, "status", None) or file_detail.get("status")
