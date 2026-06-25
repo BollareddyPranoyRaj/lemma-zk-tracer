@@ -22,13 +22,16 @@ def show_dashboard(uploaded_file, data):
 
     st.divider()
 
-    # Metrics
+    # Financial Metrics
     show_metrics(data["metrics"])
 
     st.divider()
 
     # Split Screen
-    left, right = st.columns([6, 4], gap="large")
+    left, right = st.columns(
+        [1.7, 1],
+        gap="large"
+    )
 
     with left:
         st.subheader("📄 Original PDF")

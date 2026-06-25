@@ -14,12 +14,13 @@ footer {
 }
 
 /* ---------- Main Container ---------- */
-.block-container {
-    padding-top: 2rem;
-    padding-left: 2rem;
-    padding-right: 2rem;
-}
 
+.block-container{
+    max-width:1600px;
+    padding-top:2rem;
+    padding-left:3rem;
+    padding-right:3rem;
+}
 /* ---------- Title ---------- */
 .title {
     text-align: center;
@@ -77,4 +78,38 @@ section[data-testid="stSidebar"] {
 /* ---------- Info ---------- */
 .stInfo {
     border-radius: 12px;
+}
+/* Better spacing between sections */
+[data-testid="stVerticalBlock"]{
+    gap:18px;
+}
+
+/* Better metric cards */
+[data-testid="stMetric"]{
+    padding:18px;
+}
+/* ================= Metric Cards ================= */
+
+div[data-testid="stMetric"]{
+
+    background:#111827;
+
+    border:1px solid #374151;
+
+    border-radius:15px;
+
+    padding:18px;
+
+    box-shadow:0px 4px 12px rgba(0,0,0,.35);
+
+    transition:0.3s;
+}
+
+div[data-testid="stMetric"]:hover{
+
+    transform:translateY(-3px);
+
+    border:1px solid #3B82F6;
+
+    box-shadow:0px 8px 18px rgba(59,130,246,.35);
 }

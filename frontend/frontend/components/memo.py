@@ -1,6 +1,7 @@
 import streamlit as st
 from frontend.components.verification import verify_metric
 
+
 def show_memo(data):
 
     verification = data["verification"]
@@ -15,34 +16,45 @@ def show_memo(data):
 
     with st.container(border=True):
 
-        c1, c2 = st.columns([1, 3])
+        st.markdown(f"### {data['company']}")
 
-        with c1:
-            st.write("**🏢 Company**")
-        with c2:
-            st.write(data["company"])
+        st.write(f"**🏥 Sector:** {data['sector']}")
 
-        st.divider()
+        st.write(f"**📌 Decision:** {data['decision']}")
 
-        c1, c2 = st.columns([1, 3])
+    st.divider()
 
-        with c1:
-            st.write("**🏭 Sector**")
-        with c2:
-            st.write(data["sector"])
+    # ================= Financial Highlights =================
 
-        st.divider()
+    st.subheader("📊 Financial Highlights")
 
-        c1, c2 = st.columns([1, 3])
+    c1, c2 = st.columns(2)
 
-        with c1:
-            st.write("**📌 Decision**")
+    with c1:
+        st.metric(
+            "💰 Revenue",
+            data["metrics"]["Revenue"]
+        )
 
-        with c2:
-            if data["decision"] == "GO":
-                st.success("GO")
-            else:
-                st.error("NO GO")
+    with c2:
+        st.metric(
+            "📈 EBITDA",
+            data["metrics"]["EBITDA"]
+        )
+
+    c3, c4 = st.columns(2)
+
+    with c3:
+        st.metric(
+            "📊 Growth",
+            data["metrics"]["Growth"]
+        )
+
+    with c4:
+        st.metric(
+            "⚠️ Risk",
+            data["metrics"]["Risk"]
+        )
 
     st.divider()
 
@@ -52,7 +64,21 @@ def show_memo(data):
 
     with st.container(border=True):
 
-        st.write(data["executive_summary"])
+        st.markdown(f"""
+### 📊 Investment Highlights
+
+- 💰 **Revenue:** {data["metrics"]["Revenue"]}
+
+- 📈 **EBITDA:** {data["metrics"]["EBITDA"]}
+
+- 📊 **Growth:** {data["metrics"]["Growth"]}
+
+- 🏥 **Sector:** {data["sector"]}
+
+- ⚠️ **Risk:** {data["metrics"]["Risk"]}
+
+- 🚀 **Recommendation:** **{data["decision"]}**
+""")
 
     st.divider()
 
