@@ -30,15 +30,15 @@ def show_dashboard(uploaded_file, data):
     # ================= Split Screen =================
     left, right = st.columns([6, 4], gap="large")
 
-with left:
-    show_pdf(uploaded_file)
+    with left:
+        show_pdf(uploaded_file)
 
-with right:
-    show_memo(data)
+    with right:
+        show_memo(data)
 
-    st.divider()
+        st.divider()
 
-    # ================= Footer =================
-    st.caption(
-        "© 2026 AI Due Diligence Platform | Secure Hash Verification | Built for Hackathon Demo"
-    )
+        # ================= Footer =================
+        st.caption(
+            "© 2026 AI Due Diligence Platform | Secure Hash Verification | Built for Hackathon Demo"
+        )
