@@ -126,18 +126,19 @@ class DocumentStore:
                 pass
 
             def _upload():
-                import io
                 import time
                 path = f"/uploads/{document_id}/{filename}"
                 logger.info("Uploading PDF to Lemma: path=%s", path)
-                self._lemma_pod.files.upload_file(
-                    io.BytesIO(pdf_bytes),
-                    path=path,
-                    filename=filename,
-                    directory_path=f"/uploads/{document_id}",
-                    description=f"doc_hash:{doc_hash}",
-                    search_enabled=True
-                )
+                with open(upload_path, "rb") as file_obj:
+                    self._lemma_pod.files.upload_file(
+                        file_obj,
+                        path=path,
+                        filename=filename,
+                        directory_path=f"/uploads/{document_id}",
+                        description=f"doc_hash:{doc_hash}",
+                        search_enabled=True
+                    )
+
 
                 # Wait/poll for vector indexing status
                 start_time = time.time()
