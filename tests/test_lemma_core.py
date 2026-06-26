@@ -60,6 +60,7 @@ async def test_lemma_native_mode_ingest():
     with patch("backend.document_store.get_settings", return_value=mock_settings), \
          patch("lemma_sdk.Pod", return_value=mock_pod), \
          patch("backend.document_store.hash_document", return_value="dummyhash"), \
+         patch("backend.document_store.open", return_value=io.BytesIO(pdf_bytes)), \
          patch("backend.document_store.DocumentStore._save_pdf", return_value="/tmp/report.pdf"):
         
         store = await DocumentStore.create()
