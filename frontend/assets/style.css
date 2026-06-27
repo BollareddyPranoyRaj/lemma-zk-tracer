@@ -1,37 +1,30 @@
-/* ---------- Import Premium Google Fonts ---------- */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+/* ---------- Import Premium Font ---------- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 /* ---------- Global Reset & Variables ---------- */
 :root {
-    --font-heading: 'Outfit', 'Segoe UI', sans-serif;
-    --font-body: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    --font-sans: 'Inter', -apple-system, sans-serif;
     
-    --brand-primary: #8251EE;
-    --brand-hover: #9366F5;
-    --brand-glow: rgba(130, 81, 238, 0.25);
+    --bg-dark-1: #0A0B0E;      /* Solid dark background */
+    --bg-dark-2: #111318;      /* Flat card backgrounds */
+    --bg-dark-3: #181A22;      /* Interactive/Hover backgrounds */
     
-    --bg-dark-1: #0A0A0C;
-    --bg-dark-2: #111115;
-    --bg-dark-3: #18181F;
+    --text-primary: #F3F4F6;   /* Off-white */
+    --text-secondary: #9CA3AF; /* Muted gray */
+    --text-muted: #6B7280;     /* Darker gray */
     
-    --text-primary: #FFFFFF;
-    --text-secondary: #A1A1AA;
-    --text-muted: #71717A;
+    --border-subtle: #1F2937;  /* Thin gray borders */
+    --border-default: #374151; /* Default borders */
     
-    --border-subtle: rgba(255, 255, 255, 0.05);
-    --border-default: rgba(255, 255, 255, 0.08);
-    --border-strong: rgba(255, 255, 255, 0.15);
-    
+    --color-brand: #3B82F6;     /* Deep functional blue */
     --color-success: #10B981;
-    --color-warning: #F59E0B;
-    --color-error: #EF4444;
-    --color-info: #3B82F6;
 }
 
 .stApp {
-    background: radial-gradient(circle at top center, #1b152d 0%, #0A0A0C 70%);
+    background-color: var(--bg-dark-1) !important;
+    background-image: none !important;
     color: var(--text-primary);
-    font-family: var(--font-body);
+    font-family: var(--font-sans);
 }
 
 /* ---------- Hide Streamlit Native Header/Footer ---------- */
@@ -40,171 +33,258 @@ header, footer {
     height: 0px;
 }
 
-/* ---------- Typography & Spacing ---------- */
-h1, h2, h3, h4 {
-    font-family: var(--font-heading) !important;
+/* ---------- Typography ---------- */
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-sans) !important;
     font-weight: 700 !important;
-    letter-spacing: -0.02em !important;
+    letter-spacing: -0.025em !important;
     color: var(--text-primary) !important;
 }
 
 p {
-    font-family: var(--font-body) !important;
+    font-family: var(--font-sans) !important;
     line-height: 1.6 !important;
     color: var(--text-secondary);
 }
 
-/* ---------- Custom Components & Layouts ---------- */
-.glass-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--border-default);
-    border-radius: 16px;
-    padding: 24px;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+/* ---------- Badges & Pill Labels ---------- */
+.badge-capsule {
+    display: inline-block;
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 99px;
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: #60A5FA;
+    text-transform: uppercase;
+    margin-bottom: 20px;
 }
 
-.glass-card:hover {
-    border-color: rgba(130, 81, 238, 0.3);
-    box-shadow: 0 10px 40px rgba(130, 81, 238, 0.1);
-    transform: translateY(-2px);
+.badge-secure {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 99px;
+    padding: 4px 12px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-bottom: 16px;
 }
 
-.glow-purple {
-    text-shadow: 0 0 20px rgba(130, 81, 238, 0.5);
-}
-
-/* ---------- Interactive Nav Bar ---------- */
-.navbar-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 32px;
-    background: rgba(10, 10, 12, 0.6);
-    border-bottom: 1px solid var(--border-subtle);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-}
-
-/* ---------- Streamlit Specific Adjustments ---------- */
+/* ---------- Columns Container ---------- */
 .block-container {
-    padding-top: 1rem !important;
+    padding-top: 2rem !important;
     padding-left: 2rem !important;
     padding-right: 2rem !important;
-    max-width: 1200px !important;
+    max-width: 1400px !important;
     margin: 0 auto;
 }
 
-/* Customizing metric container */
-div[data-testid="metric-container"] {
-    background: rgba(255, 255, 255, 0.02) !important;
-    border: 1px solid var(--border-default) !important;
-    border-radius: 12px !important;
-    padding: 16px !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
+/* ---------- Left Side: Pipeline Tracker ---------- */
+.pipeline-desc {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
 }
 
-div[data-testid="metric-container"] label {
-    font-family: var(--font-heading) !important;
-    color: var(--text-secondary) !important;
-    font-size: 14px !important;
-    font-weight: 500 !important;
+.pipeline-step {
+    background: var(--bg-dark-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
-    font-family: var(--font-heading) !important;
-    font-size: 28px !important;
-    font-weight: 700 !important;
+.pipeline-step.active {
+    border-color: rgba(59, 130, 246, 0.4);
+    background: rgba(59, 130, 246, 0.02);
+    color: var(--text-primary);
+}
+
+.pipeline-step.success {
+    border-color: rgba(16, 185, 129, 0.4);
+    background: rgba(16, 185, 129, 0.02);
+    color: var(--text-primary);
+}
+
+/* ---------- Center: Main Hero Area ---------- */
+.main-title {
+    font-size: 44px;
+    line-height: 1.15;
+    font-weight: 800;
+    margin-top: 10px;
+    margin-bottom: 24px;
+    color: var(--text-primary);
+}
+
+.main-subtitle {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin-bottom: 36px;
+    max-width: 680px;
+}
+
+/* ---------- Row Cards ---------- */
+.feature-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 40px;
+}
+
+.feature-pill-card {
+    background: var(--bg-dark-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.feature-pill-card h5 {
+    margin: 0 0 6px 0 !important;
+    font-size: 14px;
+    font-weight: 600 !important;
     color: var(--text-primary) !important;
 }
 
-/* ---------- Form inputs & widgets styling ---------- */
-div[data-baseweb="select"] > div {
-    background-color: rgba(255, 255, 255, 0.03) !important;
-    border: 1px solid var(--border-default) !important;
-    color: white !important;
+.feature-pill-card p {
+    margin: 0 !important;
+    font-size: 12px;
+    color: var(--text-secondary);
 }
 
-div[data-baseweb="slider"] {
-    margin-top: 12px;
+/* ---------- Right Side: Metadata Stack ---------- */
+.info-stacked-card {
+    background: var(--bg-dark-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 18px;
+    margin-bottom: 16px;
+}
+
+.info-stacked-card label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+}
+
+.info-stacked-card .value {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* ---------- Upload Card Section ---------- */
+.upload-card {
+    background: var(--bg-dark-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 24px;
     margin-bottom: 12px;
 }
 
-/* ---------- CTA Streamlit Buttons ---------- */
-div.stButton > button {
-    display: inline-flex;
+.upload-header {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, var(--brand-primary) 0%, #6332d0 100%) !important;
-    color: white !important;
-    font-family: var(--font-heading) !important;
-    font-size: 16px !important;
+    margin-bottom: 20px;
+}
+
+.upload-header h4 {
+    margin: 0 !important;
+    font-size: 16px;
     font-weight: 600 !important;
-    padding: 12px 28px !important;
-    height: 48px !important;
-    border-radius: 10px !important;
-    border: none !important;
-    box-shadow: 0 0 15px var(--brand-glow) !important;
-    cursor: pointer;
-    transition: all 0.25s ease !important;
-    text-transform: none;
-    letter-spacing: -0.01em;
 }
 
-div.stButton > button:hover {
-    background: linear-gradient(135deg, var(--brand-hover) 0%, var(--brand-primary) 100%) !important;
-    box-shadow: 0 0 25px rgba(130, 81, 238, 0.45) !important;
-    transform: translateY(-2px);
+.upload-header span {
+    font-size: 12px;
+    color: var(--text-muted);
 }
 
-div.stButton > button:active {
-    transform: translateY(0);
+/* Customize Streamlit uploader to be sleek and flat */
+div[data-testid="stFileUploader"] {
+    background-color: var(--bg-dark-1) !important;
+    border: 1px dashed var(--border-default) !important;
+    border-radius: 8px !important;
+    padding: 12px !important;
 }
 
-/* Reset / Secondary buttons */
-div.stButton > button[key*="reset"] {
-    background: rgba(255,255,255,0.05) !important;
+div[data-testid="stFileUploader"] section {
+    background-color: transparent !important;
+    padding: 10px !important;
+}
+
+div[data-testid="stFileUploader"] button {
+    background-color: var(--bg-dark-3) !important;
     border: 1px solid var(--border-default) !important;
+    border-radius: 6px !important;
+    color: white !important;
+    font-weight: 500 !important;
+    font-size: 13px !important;
+    padding: 6px 16px !important;
+    height: 36px !important;
     box-shadow: none !important;
 }
-div.stButton > button[key*="reset"]:hover {
-    background: rgba(255,255,255,0.1) !important;
-    border-color: var(--border-strong) !important;
+
+div[data-testid="stFileUploader"] button:hover {
+    background-color: #1f2937 !important;
 }
 
-/* ---------- Feature Icon Wrap ---------- */
-.icon-box {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    background: rgba(130, 81, 238, 0.12);
-    border: 1px solid rgba(130, 81, 238, 0.2);
-    margin-bottom: 16px;
-    color: var(--brand-primary);
+/* ---------- Sidebar Styling Override ---------- */
+section[data-testid="stSidebar"] {
+    background-color: var(--bg-dark-2) !important;
+    border-right: 1px solid var(--border-subtle) !important;
 }
 
-/* ---------- Custom Verification Evidence Component ---------- */
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3 {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+}
+
+/* Metric Container overrides inside dashboard */
+div[data-testid="metric-container"] {
+    background: var(--bg-dark-2) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+}
+
+/* Verification Provenance card styling */
 .verify-box {
-    background: rgba(16, 185, 129, 0.03);
-    border-left: 3px solid var(--color-success);
-    border-radius: 4px 12px 12px 4px;
-    padding: 16px;
-    margin-bottom: 12px;
+    background: rgba(16, 185, 129, 0.02) !important;
+    border-left: 2px solid var(--color-success) !important;
+    border-radius: 4px;
+    padding: 14px !important;
+    margin-bottom: 12px !important;
+    border-top: 1px solid var(--border-subtle);
+    border-right: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 .hash-label {
     font-family: monospace;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-muted);
-    background: rgba(0,0,0,0.3);
+    background: var(--bg-dark-1);
     padding: 4px 8px;
     border-radius: 4px;
+    border: 1px solid var(--border-subtle);
 }
