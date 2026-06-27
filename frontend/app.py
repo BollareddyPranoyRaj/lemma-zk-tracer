@@ -1,5 +1,6 @@
 import streamlit as st
 
+from components.landing import show_landing
 from components.upload import upload_pdf as upload_pdf_ui
 from components.dashboard import show_dashboard
 from components.loader import processing_animation
@@ -8,7 +9,7 @@ from services.api import upload_pdf as upload_pdf_api, analyze_document, map_bac
 
 # ---------------- Page Config ----------------
 st.set_page_config(
-    page_title="AI Investment Memo Generator",
+    page_title="Verifiable Due Diligence Tracer",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -37,17 +38,26 @@ if "show_dashboard" not in st.session_state:
 if "analysis_data" not in st.session_state:
     st.session_state.analysis_data = None
 
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "landing"
+
 # ---------------- Sidebar ----------------
 with st.sidebar:
 
-    st.title("📊 Analysis Pipeline")
+    st.title("📊 Pipeline Control")
+    
+    if st.button("🏠 Home / Landing Page", key="sidebar_home_btn"):
+        st.session_state.current_page = "landing"
+        st.rerun()
+
+    st.divider()
 
     if st.session_state.uploaded_file:
         st.success("✅ PDF Uploaded")
     else:
         st.info("⏳ Waiting for PDF")
 
-    if st.session_state.show_dashboard:
+    if st.session_state.current_page == "dashboard":
         st.success("✅ Hash Generated")
         st.success("✅ Revenue Extracted")
         st.success("✅ EBITDA Extracted")
@@ -63,27 +73,27 @@ with st.sidebar:
     max_cust_conc = st.slider("Max Customer Concentration (%)", min_value=5.0, max_value=100.0, value=40.0, step=1.0)
     min_growth = st.slider("Min YoY Growth (%)", min_value=1.0, max_value=100.0, value=5.0, step=1.0)
 
-    if st.session_state.show_dashboard:
+    if st.session_state.current_page == "dashboard":
         st.divider()
         if st.button("🔄 Reset / Analyze New PDF"):
             st.session_state.uploaded_file = None
             st.session_state.show_dashboard = False
             st.session_state.analysis_data = None
+            st.session_state.current_page = "upload"
             st.rerun()
 
-# ---------------- Upload Screen ----------------
-if not st.session_state.show_dashboard:
+# ---------------- Page Router ----------------
+if st.session_state.current_page == "landing":
+    show_landing()
 
+elif st.session_state.current_page == "upload":
     uploaded_file = upload_pdf_ui()
 
     if uploaded_file:
-
         st.session_state.uploaded_file = uploaded_file
-
         st.success(f"📄 Uploaded: {uploaded_file.name}")
 
         if st.button("🚀 Generate Investment Memo"):
-
             processing_animation()
 
             # 1. Upload & Ingest
@@ -107,15 +117,14 @@ if not st.session_state.show_dashboard:
                     mapped_data = map_backend_response_to_ui(analyze_res, uploaded_file)
                     st.session_state.analysis_data = mapped_data
                     st.session_state.show_dashboard = True
+                    st.session_state.current_page = "dashboard"
                     st.rerun()
                 else:
                     st.error("❌ Failed to analyze the document. Check backend logs.")
             else:
                 st.error("❌ Failed to ingest the PDF. Check backend logs.")
 
-# ---------------- Dashboard ----------------
-else:
-
+elif st.session_state.current_page == "dashboard":
     show_dashboard(
         st.session_state.uploaded_file,
         st.session_state.analysis_data
