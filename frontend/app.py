@@ -1,7 +1,6 @@
 import streamlit as st
 
 from components.landing import show_landing
-from components.upload import upload_pdf as upload_pdf_ui
 from components.dashboard import show_dashboard
 from components.loader import processing_animation
 from data.mock_data import mock_data
@@ -39,15 +38,18 @@ if "analysis_data" not in st.session_state:
     st.session_state.analysis_data = None
 
 if "current_page" not in st.session_state:
-    st.session_state.current_page = "landing"
+    st.session_state.current_page = "upload"
 
 # ---------------- Sidebar ----------------
 with st.sidebar:
 
     st.title("📊 Pipeline Control")
     
-    if st.button("🏠 Home / Landing Page", key="sidebar_home_btn"):
-        st.session_state.current_page = "landing"
+    if st.button("🏠 Upload Screen / Home", key="sidebar_home_btn"):
+        st.session_state.uploaded_file = None
+        st.session_state.show_dashboard = False
+        st.session_state.analysis_data = None
+        st.session_state.current_page = "upload"
         st.rerun()
 
     st.divider()
@@ -83,15 +85,12 @@ with st.sidebar:
             st.rerun()
 
 # ---------------- Page Router ----------------
-if st.session_state.current_page == "landing":
-    show_landing()
-
-elif st.session_state.current_page == "upload":
-    uploaded_file = upload_pdf_ui()
+if st.session_state.current_page == "upload":
+    uploaded_file = show_landing()
 
     if uploaded_file:
         st.session_state.uploaded_file = uploaded_file
-        st.success(f"📄 Uploaded: {uploaded_file.name}")
+        st.success(f"📄 Ready to Analyze: {uploaded_file.name}")
 
         if st.button("🚀 Generate Investment Memo"):
             processing_animation()
