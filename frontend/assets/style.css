@@ -1,80 +1,210 @@
-/* ---------- Global ---------- */
+/* ---------- Import Premium Google Fonts ---------- */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+/* ---------- Global Reset & Variables ---------- */
+:root {
+    --font-heading: 'Outfit', 'Segoe UI', sans-serif;
+    --font-body: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    
+    --brand-primary: #8251EE;
+    --brand-hover: #9366F5;
+    --brand-glow: rgba(130, 81, 238, 0.25);
+    
+    --bg-dark-1: #0A0A0C;
+    --bg-dark-2: #111115;
+    --bg-dark-3: #18181F;
+    
+    --text-primary: #FFFFFF;
+    --text-secondary: #A1A1AA;
+    --text-muted: #71717A;
+    
+    --border-subtle: rgba(255, 255, 255, 0.05);
+    --border-default: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.15);
+    
+    --color-success: #10B981;
+    --color-warning: #F59E0B;
+    --color-error: #EF4444;
+    --color-info: #3B82F6;
+}
+
 .stApp {
-    background: linear-gradient(135deg, #0b1120, #111827);
-    color: #f8fafc;
+    background: radial-gradient(circle at top center, #1b152d 0%, #0A0A0C 70%);
+    color: var(--text-primary);
+    font-family: var(--font-body);
 }
 
-/* ---------- Hide Streamlit Header ---------- */
-header {
+/* ---------- Hide Streamlit Native Header/Footer ---------- */
+header, footer {
     visibility: hidden;
+    height: 0px;
 }
 
-footer {
-    visibility: hidden;
+/* ---------- Typography & Spacing ---------- */
+h1, h2, h3, h4 {
+    font-family: var(--font-heading) !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+    color: var(--text-primary) !important;
 }
 
-/* ---------- Main Container ---------- */
+p {
+    font-family: var(--font-body) !important;
+    line-height: 1.6 !important;
+    color: var(--text-secondary);
+}
+
+/* ---------- Custom Components & Layouts ---------- */
+.glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-default);
+    border-radius: 16px;
+    padding: 24px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+    border-color: rgba(130, 81, 238, 0.3);
+    box-shadow: 0 10px 40px rgba(130, 81, 238, 0.1);
+    transform: translateY(-2px);
+}
+
+.glow-purple {
+    text-shadow: 0 0 20px rgba(130, 81, 238, 0.5);
+}
+
+/* ---------- Interactive Nav Bar ---------- */
+.navbar-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 32px;
+    background: rgba(10, 10, 12, 0.6);
+    border-bottom: 1px solid var(--border-subtle);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+/* ---------- Streamlit Specific Adjustments ---------- */
 .block-container {
-    padding-top: 2rem;
-    padding-left: 2rem;
-    padding-right: 2rem;
+    padding-top: 1rem !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+    max-width: 1200px !important;
+    margin: 0 auto;
 }
 
-/* ---------- Title ---------- */
-.title {
-    text-align: center;
-    font-size: 42px;
-    font-weight: 700;
-    color: white;
-}
-
-.subtitle {
-    text-align: center;
-    color: #94a3b8;
-    font-size: 18px;
-    margin-bottom: 30px;
-}
-
-/* ---------- Metric Cards ---------- */
+/* Customizing metric container */
 div[data-testid="metric-container"] {
-    background: rgba(30,41,59,0.85);
-    border: 1px solid #334155;
-    border-radius: 18px;
-    padding: 18px;
-    box-shadow: 0px 8px 20px rgba(0,0,0,.35);
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid var(--border-default) !important;
+    border-radius: 12px !important;
+    padding: 16px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
 }
 
-/* ---------- Buttons ---------- */
-.stButton > button {
-    width: 100%;
+div[data-testid="metric-container"] label {
+    font-family: var(--font-heading) !important;
+    color: var(--text-secondary) !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+}
+
+div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
+    font-family: var(--font-heading) !important;
+    font-size: 28px !important;
+    font-weight: 700 !important;
+    color: var(--text-primary) !important;
+}
+
+/* ---------- Form inputs & widgets styling ---------- */
+div[data-baseweb="select"] > div {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid var(--border-default) !important;
+    color: white !important;
+}
+
+div[data-baseweb="slider"] {
+    margin-top: 12px;
+    margin-bottom: 12px;
+}
+
+/* ---------- CTA Streamlit Buttons ---------- */
+div.stButton > button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--brand-primary) 0%, #6332d0 100%) !important;
+    color: white !important;
+    font-family: var(--font-heading) !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    padding: 12px 28px !important;
+    height: 48px !important;
+    border-radius: 10px !important;
+    border: none !important;
+    box-shadow: 0 0 15px var(--brand-glow) !important;
+    cursor: pointer;
+    transition: all 0.25s ease !important;
+    text-transform: none;
+    letter-spacing: -0.01em;
+}
+
+div.stButton > button:hover {
+    background: linear-gradient(135deg, var(--brand-hover) 0%, var(--brand-primary) 100%) !important;
+    box-shadow: 0 0 25px rgba(130, 81, 238, 0.45) !important;
+    transform: translateY(-2px);
+}
+
+div.stButton > button:active {
+    transform: translateY(0);
+}
+
+/* Reset / Secondary buttons */
+div.stButton > button[key*="reset"] {
+    background: rgba(255,255,255,0.05) !important;
+    border: 1px solid var(--border-default) !important;
+    box-shadow: none !important;
+}
+div.stButton > button[key*="reset"]:hover {
+    background: rgba(255,255,255,0.1) !important;
+    border-color: var(--border-strong) !important;
+}
+
+/* ---------- Feature Icon Wrap ---------- */
+.icon-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
     height: 48px;
     border-radius: 12px;
-    background: linear-gradient(90deg,#2563eb,#3b82f6);
-    color: white;
-    font-weight: bold;
-    border: none;
+    background: rgba(130, 81, 238, 0.12);
+    border: 1px solid rgba(130, 81, 238, 0.2);
+    margin-bottom: 16px;
+    color: var(--brand-primary);
 }
 
-.stButton > button:hover {
-    background: linear-gradient(90deg,#1d4ed8,#2563eb);
+/* ---------- Custom Verification Evidence Component ---------- */
+.verify-box {
+    background: rgba(16, 185, 129, 0.03);
+    border-left: 3px solid var(--color-success);
+    border-radius: 4px 12px 12px 4px;
+    padding: 16px;
+    margin-bottom: 12px;
 }
 
-/* ---------- Sidebar ---------- */
-section[data-testid="stSidebar"] {
-    background: #111827;
-}
-
-/* ---------- Expanders ---------- */
-.streamlit-expanderHeader {
-    font-weight: bold;
-}
-
-/* ---------- Success ---------- */
-.stSuccess {
-    border-radius: 12px;
-}
-
-/* ---------- Info ---------- */
-.stInfo {
-    border-radius: 12px;
+.hash-label {
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    background: rgba(0,0,0,0.3);
+    padding: 4px 8px;
+    border-radius: 4px;
 }
