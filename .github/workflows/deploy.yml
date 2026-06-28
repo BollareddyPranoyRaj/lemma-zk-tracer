@@ -20,4 +20,5 @@ jobs:
             sudo pkill -f "streamlit run" || true
             sleep 3
             source .venv/bin/activate
-            nohup streamlit run frontend/app.py --server.address 0.0.0.0 --server.port 8501 &
+            streamlit run frontend/app.py --server.address 0.0.0.0 --server.port 8501 &
+            sleep 2
