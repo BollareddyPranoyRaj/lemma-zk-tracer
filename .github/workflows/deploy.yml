@@ -17,7 +17,7 @@ jobs:
           script: |
             cd ~/lemma-zk-tracer
             git pull origin main
-            sudo pkill -f streamlit || true
-            sleep 2
+            sudo pkill -f "streamlit run" || true
+            sleep 3
             source .venv/bin/activate
-            nohup streamlit run frontend/app.py --server.address 0.0.0.0 --server.port 8501 > /tmp/streamlit.log 2>&1 &
+            nohup streamlit run frontend/app.py --server.address 0.0.0.0 --server.port 8501 &
