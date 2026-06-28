@@ -14,11 +14,10 @@ jobs:
           host: 52.22.227.138
           username: ubuntu
           key: ${{ secrets.AWS_PRIVATE_KEY }}
-          script_stop: true
           script: |
             cd ~/lemma-zk-tracer
             git pull origin main
             pkill -9 -f "streamlit run" || true
             sleep 2
             source .venv/bin/activate
-            nohup streamlit run frontend/app.py --server.address 0.0.0.0 --server.port 8501 &
+            nohup streamlit run frontend/app.py --server.address 0.0.0.0 --server.port 8501 > /tmp/streamlit.log 2>&1 &
