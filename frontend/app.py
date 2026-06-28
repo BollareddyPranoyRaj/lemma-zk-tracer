@@ -2,7 +2,7 @@ import streamlit as st
 
 from components.landing import show_landing
 from components.dashboard import show_dashboard
-from components.loader import processing_animation
+from components.loader import show_ingest_loader, show_analysis_loader
 from data.mock_data import mock_data
 from services.api import upload_pdf as upload_pdf_api, analyze_document, map_backend_response_to_ui
 
@@ -40,6 +40,12 @@ if "analysis_data" not in st.session_state:
 if "current_page" not in st.session_state:
     st.session_state.current_page = "upload"
 
+if "mandate" not in st.session_state:
+    st.session_state.mandate = None
+
+if "document_id" not in st.session_state:
+    st.session_state.document_id = None
+
 # ---------------- Sidebar ----------------
 with st.sidebar:
 
@@ -54,16 +60,22 @@ with st.sidebar:
 
     st.divider()
 
-    if st.session_state.uploaded_file:
+    # Step 1 status
+    if st.session_state.current_page in ["loading_analyze", "dashboard"]:
         st.success("✅ PDF Uploaded")
+    elif st.session_state.current_page == "loading_ingest":
+        st.info("⏳ Uploading to Lemma...")
     else:
         st.info("⏳ Waiting for PDF")
 
+    # Step 2 status
     if st.session_state.current_page == "dashboard":
         st.success("✅ Hash Generated")
         st.success("✅ Revenue Extracted")
         st.success("✅ EBITDA Extracted")
         st.success("✅ Investment Memo Generated")
+    elif st.session_state.current_page == "loading_analyze":
+        st.info("⏳ Analyzing metrics...")
     else:
         st.info("⏳ Waiting for Analysis")
 
@@ -93,35 +105,49 @@ if st.session_state.current_page == "upload":
         st.success(f"📄 Ready to Analyze: {uploaded_file.name}")
 
         if st.button("🚀 Generate Investment Memo"):
-            processing_animation()
+            st.session_state.mandate = {
+                "min_revenue_m": float(min_revenue),
+                "min_ebitda_m": float(min_ebitda),
+                "min_ebitda_margin_pct": float(min_ebitda_margin),
+                "max_customer_concentration_pct": float(max_cust_conc),
+                "min_yoy_growth_pct": float(min_growth),
+                "allowed_legal_risk_levels": ["Low", "Medium"]
+            }
+            st.session_state.current_page = "loading_ingest"
+            st.rerun()
 
-            # 1. Upload & Ingest
-            ingest_res = upload_pdf_api(uploaded_file)
-            if ingest_res:
-                document_id = ingest_res["document_id"]
-                
-                # 2. Analyze Document with Mandate
-                mandate = {
-                    "min_revenue_m": float(min_revenue),
-                    "min_ebitda_m": float(min_ebitda),
-                    "min_ebitda_margin_pct": float(min_ebitda_margin),
-                    "max_customer_concentration_pct": float(max_cust_conc),
-                    "min_yoy_growth_pct": float(min_growth),
-                    "allowed_legal_risk_levels": ["Low", "Medium"]
-                }
-                
-                analyze_res = analyze_document(document_id, mandate)
-                if analyze_res:
-                    # 3. Map backend response to UI
-                    mapped_data = map_backend_response_to_ui(analyze_res, uploaded_file)
-                    st.session_state.analysis_data = mapped_data
-                    st.session_state.show_dashboard = True
-                    st.session_state.current_page = "dashboard"
-                    st.rerun()
-                else:
-                    st.error("❌ Failed to analyze the document. Check backend logs.")
-            else:
-                st.error("❌ Failed to ingest the PDF. Check backend logs.")
+elif st.session_state.current_page == "loading_ingest":
+    show_ingest_loader()
+    
+    # 1. Upload & Ingest
+    ingest_res = upload_pdf_api(st.session_state.uploaded_file)
+    if ingest_res:
+        st.session_state.document_id = ingest_res["document_id"]
+        st.session_state.current_page = "loading_analyze"
+        st.rerun()
+    else:
+        st.error("❌ Failed to ingest the PDF. Check backend logs.")
+        if st.button("↩ Go Back"):
+            st.session_state.current_page = "upload"
+            st.rerun()
+
+elif st.session_state.current_page == "loading_analyze":
+    show_analysis_loader()
+    
+    # 2. Analyze Document with Mandate
+    analyze_res = analyze_document(st.session_state.document_id, st.session_state.mandate)
+    if analyze_res:
+        # 3. Map backend response to UI
+        mapped_data = map_backend_response_to_ui(analyze_res, st.session_state.uploaded_file)
+        st.session_state.analysis_data = mapped_data
+        st.session_state.show_dashboard = True
+        st.session_state.current_page = "dashboard"
+        st.rerun()
+    else:
+        st.error("❌ Failed to analyze the document. Check backend logs.")
+        if st.button("↩ Go Back"):
+            st.session_state.current_page = "upload"
+            st.rerun()
 
 elif st.session_state.current_page == "dashboard":
     show_dashboard(
