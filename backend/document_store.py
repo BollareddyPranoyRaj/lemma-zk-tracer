@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import subprocess
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -36,6 +37,62 @@ logger = logging.getLogger(__name__)
 _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="docstore")
 
 
+def _get_fresh_lemma_token() -> str | None:
+    """Run CLI command programmatically to fetch a fresh Lemma Token."""
+    try:
+        project_root = Path(__file__).resolve().parent.parent
+        lemma_cli = project_root / ".venv" / "bin" / "lemma"
+        if not lemma_cli.exists():
+            lemma_cli = "lemma"
+            
+        result = subprocess.run(
+            [str(lemma_cli), "auth", "print-token"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        token = result.stdout.strip()
+        if token:
+            logger.info("Successfully fetched fresh Lemma auth token programmatically.")
+            return token
+    except Exception as e:
+        logger.warning("Failed to fetch fresh Lemma token via CLI: %s", e)
+    return None
+
+
+def _update_env_token(token: str) -> None:
+    """Write the new token back to the .env file so all modules share it."""
+    try:
+        project_root = Path(__file__).resolve().parent.parent
+        env_path = project_root / ".env"
+        if not env_path.exists():
+            return
+            
+        with open(env_path, "r") as f:
+            lines = f.readlines()
+            
+        updated = False
+        for i, line in enumerate(lines):
+            if line.startswith("LEMMA_API_KEY="):
+                lines[i] = f"LEMMA_API_KEY={token}\n"
+                updated = True
+                break
+                
+        if not updated:
+            lines.append(f"\nLEMMA_API_KEY={token}\n")
+            
+        with open(env_path, "w") as f:
+            f.writelines(lines)
+            
+        # Update os.environ and get_settings() directly
+        os.environ["LEMMA_TOKEN"] = token
+        os.environ["LEMMA_API_KEY"] = token
+        get_settings().lemma_api_key = token
+        logger.info("Successfully wrote refreshed Lemma token to .env and updated in-memory settings.")
+    except Exception as e:
+        logger.warning("Failed to write refreshed Lemma token to .env: %s", e)
+
+
 class DocumentStore:
     """
     Manages document ingestion, chunking, embedding, and retrieval.
@@ -55,6 +112,20 @@ class DocumentStore:
     def is_lemma_active(self) -> bool:
         """Check if Lemma client is configured and active."""
         return self._lemma_pod is not None
+
+    def _reinit_lemma_client(self) -> bool:
+        """Fetch fresh token and reinitialize self._lemma_pod client."""
+        token = _get_fresh_lemma_token()
+        if token:
+            _update_env_token(token)
+            try:
+                from lemma_sdk import Pod
+                self._lemma_pod = Pod(pod_id=self._settings.lemma_pod_id, token=token)
+                logger.info("Successfully re-initialized Lemma Pod client with fresh token.")
+                return True
+            except Exception as e:
+                logger.warning("Failed to re-initialize Lemma Pod client: %s", e)
+        return False
 
     @classmethod
     async def create(cls) -> "DocumentStore":
@@ -83,6 +154,11 @@ class DocumentStore:
 
         client, collection, ef = await loop.run_in_executor(_executor, _init_chroma)
         
+        # Try fetching fresh token on startup to avoid expired token failures
+        token = _get_fresh_lemma_token()
+        if token:
+            _update_env_token(token)
+            
         lemma_pod = None
         if settings.lemma_api_key and settings.lemma_pod_id:
             try:
@@ -113,51 +189,50 @@ class DocumentStore:
         logger.info("PDF saved: doc_id=%s path=%s", document_id, upload_path)
 
         if self.is_lemma_active:
+            # Count pages locally for accurate metadata response
+            total_pages = 1
             try:
-                # Count pages locally for accurate metadata response
-                total_pages = 1
-                try:
-                    import io
-                    import pypdf
-                    reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
-                    total_pages = len(reader.pages)
-                except Exception:
-                    pass
+                import io
+                import pypdf
+                reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
+                total_pages = len(reader.pages)
+            except Exception:
+                pass
 
-                def _upload():
-                    import time
-                    path = f"/uploads/{document_id}/{filename}"
-                    logger.info("Uploading PDF to Lemma: path=%s", path)
-                    with open(upload_path, "rb") as file_obj:
-                        self._lemma_pod.files.upload_file(
-                            file_obj,
-                            path=path,
-                            filename=filename,
-                            directory_path=f"/uploads/{document_id}",
-                            description=f"doc_hash:{doc_hash}",
-                            search_enabled=True
-                        )
+            def _upload():
+                import time
+                path = f"/uploads/{document_id}/{filename}"
+                logger.info("Uploading PDF to Lemma: path=%s", path)
+                with open(upload_path, "rb") as file_obj:
+                    self._lemma_pod.files.upload_file(
+                        file_obj,
+                        path=path,
+                        filename=filename,
+                        directory_path=f"/uploads/{document_id}",
+                        description=f"doc_hash:{doc_hash}",
+                        search_enabled=True
+                    )
 
-                    # Wait/poll for vector indexing status
-                    start_time = time.time()
-                    while time.time() - start_time < 180:
-                        try:
-                            file_detail = self._lemma_pod.files.get(path)
-                            status = getattr(file_detail, "status", None) or file_detail.get("status")
-                            if status == "COMPLETED":
-                                logger.info("Lemma indexing COMPLETED for path=%s", path)
-                                return
-                            elif status in ("FAILED", "NOT_REQUIRED"):
-                                logger.warning("Lemma indexing status: %s", status)
-                                return
-                        except Exception as e:
-                            logger.warning("Error fetching Lemma file details: %s", e)
-                        time.sleep(1.5)
-                    logger.warning("Timeout waiting for Lemma indexing on %s", path)
+                # Wait/poll for vector indexing status
+                start_time = time.time()
+                while time.time() - start_time < 180:
+                    try:
+                        file_detail = self._lemma_pod.files.get(path)
+                        status = getattr(file_detail, "status", None) or file_detail.get("status")
+                        if status == "COMPLETED":
+                            logger.info("Lemma indexing COMPLETED for path=%s", path)
+                            return
+                        elif status in ("FAILED", "NOT_REQUIRED"):
+                            logger.warning("Lemma indexing status: %s", status)
+                            return
+                    except Exception as e:
+                        logger.warning("Error fetching Lemma file details: %s", e)
+                    time.sleep(1.5)
+                logger.warning("Timeout waiting for Lemma indexing on %s", path)
 
-                loop = asyncio.get_event_loop()
+            loop = asyncio.get_event_loop()
+            try:
                 await loop.run_in_executor(_executor, _upload)
-
                 return {
                     "document_id": document_id,
                     "doc_hash": doc_hash,
@@ -166,9 +241,25 @@ class DocumentStore:
                     "filename": filename,
                 }
             except Exception as e:
-                logger.warning("Lemma ingestion failed: %s. Falling back to local store.", e)
-                self._lemma_pod = None
-
+                err_msg = str(e).lower()
+                if "401" in err_msg or "expired" in err_msg or "unauthorized" in err_msg:
+                    logger.info("Lemma ingestion failed with 401. Attempting token refresh...")
+                    if self._reinit_lemma_client():
+                        try:
+                            await loop.run_in_executor(_executor, _upload)
+                            return {
+                                "document_id": document_id,
+                                "doc_hash": doc_hash,
+                                "total_pages": total_pages,
+                                "total_chunks": 1,
+                                "filename": filename,
+                            }
+                        except Exception as retry_e:
+                            logger.warning("Lemma ingestion failed after refresh: %s. Falling back to local store.", retry_e)
+                    else:
+                        logger.warning("Failed to refresh Lemma token. Falling back to local store.")
+                else:
+                    logger.warning("Lemma ingestion failed: %s. Falling back to local store.", e)
 
         # Parse and chunk in thread (pdfplumber is sync)
         loop = asyncio.get_event_loop()
@@ -317,42 +408,52 @@ class DocumentStore:
         loop = asyncio.get_event_loop()
 
         if self.is_lemma_active:
+            def _retrieve_lemma():
+                logger.info("Retrieving via Lemma Search: doc_id=%s query=%r", document_id, query)
+                doc_hash = None
+                try:
+                    file_list = self._lemma_pod.files.list(path=f"/uploads/{document_id}")
+                    if file_list.items:
+                        desc = file_list.items[0].description
+                        if desc and "doc_hash:" in desc:
+                            doc_hash = desc.split("doc_hash:")[1]
+                except Exception as e:
+                    logger.warning("Error getting doc_hash description from Lemma: %s", e)
+
+                if not doc_hash:
+                    doc_hash = "0" * 64
+
+                response = self._lemma_pod.files.search(
+                    query=query,
+                    search_method="VECTOR",
+                    scope_path=f"/uploads/{document_id}"
+                )
+
+                output = []
+                for item in response.items[:n_results]:
+                    output.append({
+                        "chunk_id": f"{item.file_id}-{item.chunk_index}",
+                        "text": item.content,
+                        "page_number": item.page_number or 1,
+                        "doc_hash": doc_hash,
+                    })
+                return output
+
             try:
-                def _retrieve_lemma():
-                    logger.info("Retrieving via Lemma Search: doc_id=%s query=%r", document_id, query)
-                    doc_hash = None
-                    try:
-                        file_list = self._lemma_pod.files.list(path=f"/uploads/{document_id}")
-                        if file_list.items:
-                            desc = file_list.items[0].description
-                            if desc and "doc_hash:" in desc:
-                                doc_hash = desc.split("doc_hash:")[1]
-                    except Exception as e:
-                        logger.warning("Error getting doc_hash description from Lemma: %s", e)
-
-                    if not doc_hash:
-                        doc_hash = "0" * 64
-
-                    response = self._lemma_pod.files.search(
-                        query=query,
-                        search_method="VECTOR",
-                        scope_path=f"/uploads/{document_id}"
-                    )
-
-                    output = []
-                    for item in response.items[:n_results]:
-                        output.append({
-                            "chunk_id": f"{item.file_id}-{item.chunk_index}",
-                            "text": item.content,
-                            "page_number": item.page_number or 1,
-                            "doc_hash": doc_hash,
-                        })
-                    return output
-
                 return await loop.run_in_executor(_executor, _retrieve_lemma)
             except Exception as e:
-                logger.warning("Lemma retrieval failed: %s. Falling back to local store.", e)
-                self._lemma_pod = None
+                err_msg = str(e).lower()
+                if "401" in err_msg or "expired" in err_msg or "unauthorized" in err_msg:
+                    logger.info("Lemma retrieval failed with 401. Attempting token refresh...")
+                    if self._reinit_lemma_client():
+                        try:
+                            return await loop.run_in_executor(_executor, _retrieve_lemma)
+                        except Exception as retry_e:
+                            logger.warning("Lemma retrieval failed after refresh: %s. Falling back to local store.", retry_e)
+                    else:
+                        logger.warning("Failed to refresh Lemma token. Falling back to local store.")
+                else:
+                    logger.warning("Lemma retrieval failed: %s. Falling back to local store.", e)
 
         results = await loop.run_in_executor(
             _executor,
@@ -397,32 +498,42 @@ class DocumentStore:
         loop = asyncio.get_event_loop()
 
         if self.is_lemma_active:
+            def _get_all_lemma():
+                doc_hash = None
+                try:
+                    file_list = self._lemma_pod.files.list(path=f"/uploads/{document_id}")
+                    if file_list.items:
+                        desc = file_list.items[0].description
+                        if desc and "doc_hash:" in desc:
+                            doc_hash = desc.split("doc_hash:")[1]
+                except Exception as e:
+                    logger.warning("Error getting doc_hash: %s", e)
+
+                if not doc_hash:
+                    doc_hash = "0" * 64
+
+                return [{
+                    "chunk_id": "lemma-mock-chunk",
+                    "text": "",
+                    "page_number": 1,
+                    "doc_hash": doc_hash
+                }]
+
             try:
-                def _get_all_lemma():
-                    doc_hash = None
-                    try:
-                        file_list = self._lemma_pod.files.list(path=f"/uploads/{document_id}")
-                        if file_list.items:
-                            desc = file_list.items[0].description
-                            if desc and "doc_hash:" in desc:
-                                doc_hash = desc.split("doc_hash:")[1]
-                    except Exception as e:
-                        logger.warning("Error getting doc_hash: %s", e)
-
-                    if not doc_hash:
-                        doc_hash = "0" * 64
-
-                    return [{
-                        "chunk_id": "lemma-mock-chunk",
-                        "text": "",
-                        "page_number": 1,
-                        "doc_hash": doc_hash
-                    }]
-
                 return await loop.run_in_executor(_executor, _get_all_lemma)
             except Exception as e:
-                logger.warning("Lemma get_all_chunks failed: %s. Falling back to local store.", e)
-                self._lemma_pod = None
+                err_msg = str(e).lower()
+                if "401" in err_msg or "expired" in err_msg or "unauthorized" in err_msg:
+                    logger.info("Lemma get_all_chunks failed with 401. Attempting token refresh...")
+                    if self._reinit_lemma_client():
+                        try:
+                            return await loop.run_in_executor(_executor, _get_all_lemma)
+                        except Exception as retry_e:
+                            logger.warning("Lemma get_all_chunks failed after refresh: %s. Falling back to local store.", retry_e)
+                    else:
+                        logger.warning("Failed to refresh Lemma token. Falling back to local store.")
+                else:
+                    logger.warning("Lemma get_all_chunks failed: %s. Falling back to local store.", e)
 
         return await loop.run_in_executor(
             _executor, self._get_all_chunks_sync, document_id
@@ -448,14 +559,24 @@ class DocumentStore:
         loop = asyncio.get_event_loop()
 
         if self.is_lemma_active:
+            def _exists_lemma():
+                file_list = self._lemma_pod.files.list(path=f"/uploads/{document_id}")
+                return bool(file_list.items)
             try:
-                def _exists_lemma():
-                    file_list = self._lemma_pod.files.list(path=f"/uploads/{document_id}")
-                    return bool(file_list.items)
                 return await loop.run_in_executor(_executor, _exists_lemma)
             except Exception as e:
-                logger.warning("Lemma document_exists check failed: %s. Falling back to local check.", e)
-                self._lemma_pod = None
+                err_msg = str(e).lower()
+                if "401" in err_msg or "expired" in err_msg or "unauthorized" in err_msg:
+                    logger.info("Lemma document_exists failed with 401. Attempting token refresh...")
+                    if self._reinit_lemma_client():
+                        try:
+                            return await loop.run_in_executor(_executor, _exists_lemma)
+                        except Exception as retry_e:
+                            logger.warning("Lemma document_exists failed after refresh: %s. Falling back to local check.", retry_e)
+                    else:
+                        logger.warning("Failed to refresh Lemma token. Falling back to local check.")
+                else:
+                    logger.warning("Lemma document_exists check failed: %s. Falling back to local check.", e)
 
         return await loop.run_in_executor(
             _executor, self._doc_exists_sync, document_id
