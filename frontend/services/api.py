@@ -94,11 +94,17 @@ def map_backend_response_to_ui(analyze_res, uploaded_file):
             "verified": bool(v_hash and val)
         }
 
+    passed = screen_result.get("passed_count", 0)
+    failed = screen_result.get("failed_count", 0)
+    total = passed + failed
+    ai_score = int((passed / total) * 100) if total > 0 else 0
+
     return {
         "company": company,
         "sector": sector,
         "decision": screen_result["decision"],
         "confidence": 95 if screen_result["decision"] == "GO" else 85,
+        "ai_score": ai_score,
         "metrics": {
             "Revenue": rev_val,
             "EBITDA": eb_val,
