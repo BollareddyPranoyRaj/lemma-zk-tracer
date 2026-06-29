@@ -1,6 +1,6 @@
 import streamlit as st
 
-def show_header():
+def show_header(ai_score=None):
 
     left, right = st.columns([5,1])
 
@@ -9,4 +9,5 @@ def show_header():
         st.caption("Enterprise Investment Analysis Engine")
 
     with right:
-        st.metric("AI Score", "94%")
+        score_str = f"{ai_score}%" if ai_score is not None else "N/A"
+        st.metric("AI Score", score_str)
