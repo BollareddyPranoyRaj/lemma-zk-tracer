@@ -10,7 +10,7 @@ from components.pdf_viewer import show_pdf
 def show_dashboard(uploaded_file, data):
 
     # ================= Header =================
-    show_header()
+    show_header(data.get("ai_score"))
 
     st.divider()
 
