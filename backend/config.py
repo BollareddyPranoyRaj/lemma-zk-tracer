@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     chunk_overlap_tokens: int = Field(default=64, ge=0, le=512)
 
     # ── LLM ───────────────────────────────────────────────────────────────────
+    llm_api_base: str = Field(default="https://api.openai.com/v1", description="Base URL for the LLM API (OpenAI-compatible)")
     llm_model: str = "gpt-4o"
     llm_temperature: float = Field(default=0.0, ge=0.0, le=1.0)
     llm_max_tokens: int = Field(default=2048, ge=256, le=8192)
