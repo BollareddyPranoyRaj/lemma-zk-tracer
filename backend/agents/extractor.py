@@ -70,7 +70,8 @@ class ExtractorAgent:
     def __init__(self, store: DocumentStore):
         self.store = store
         self.settings = get_settings()
-        self.client = AsyncOpenAI(api_key=self.settings.openai_api_key)
+        api_base = self.settings.llm_api_base if self.settings.llm_api_base else None
+        self.client = AsyncOpenAI(api_key=self.settings.openai_api_key, base_url=api_base)
 
     async def extract(self, document_id: str, doc_hash: str) -> FinancialMetrics:
         """
