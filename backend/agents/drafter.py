@@ -43,7 +43,8 @@ class DrafterAgent:
 
     def __init__(self):
         self.settings = get_settings()
-        self.client = AsyncOpenAI(api_key=self.settings.openai_api_key)
+        api_base = self.settings.llm_api_base if self.settings.llm_api_base else None
+        self.client = AsyncOpenAI(api_key=self.settings.openai_api_key, base_url=api_base)
 
     async def draft(
         self,
