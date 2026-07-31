@@ -100,7 +100,7 @@ class DocumentStore:
     local fallback (ChromaDB + pdfplumber + sentence-transformers).
     """
 
-    def __init__(self, chroma_client, collection, embedding_fn, lemma_pod=None):
+    def __init__(self, chroma_client=None, collection=None, embedding_fn=None, lemma_pod=None):
         self._chroma = chroma_client
         self._collection = collection
         self._embed = embedding_fn
@@ -112,6 +112,27 @@ class DocumentStore:
     def is_lemma_active(self) -> bool:
         """Check if Lemma client is configured and active."""
         return self._lemma_pod is not None
+
+    def _ensure_chroma_initialized(self) -> None:
+        """Lazily initialize ChromaDB client, collection, and embedding function if not already done."""
+        if self._collection is not None:
+            return
+            
+        logger.info("Lazily initializing ChromaDB and loading sentence-transformers embedding model...")
+        import chromadb
+        from chromadb.utils import embedding_functions
+
+        Path(self._settings.chroma_persist_dir).mkdir(parents=True, exist_ok=True)
+        self._chroma = chromadb.PersistentClient(path=self._settings.chroma_persist_dir)
+        self._embed = embedding_functions.SentenceTransformerEmbeddingFunction(
+            model_name="all-MiniLM-L6-v2"
+        )
+        self._collection = self._chroma.get_or_create_collection(
+            name="document_chunks",
+            embedding_function=self._embed,
+            metadata={"hnsw:space": "cosine"},
+        )
+        logger.info("ChromaDB and embedding model initialized successfully.")
 
     def _reinit_lemma_client(self) -> bool:
         """Fetch fresh token and reinitialize self._lemma_pod client."""
@@ -136,24 +157,6 @@ class DocumentStore:
         settings = get_settings()
         loop = asyncio.get_event_loop()
 
-        def _init_chroma():
-            import chromadb
-            from chromadb.utils import embedding_functions
-
-            Path(settings.chroma_persist_dir).mkdir(parents=True, exist_ok=True)
-            client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
-            ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-                model_name="all-MiniLM-L6-v2"
-            )
-            collection = client.get_or_create_collection(
-                name="document_chunks",
-                embedding_function=ef,
-                metadata={"hnsw:space": "cosine"},
-            )
-            return client, collection, ef
-
-        client, collection, ef = await loop.run_in_executor(_executor, _init_chroma)
-        
         # Try fetching fresh token on startup to avoid expired token failures
         token = _get_fresh_lemma_token()
         if token:
@@ -167,6 +170,33 @@ class DocumentStore:
                 logger.info("Lemma active as core datastore: pod_id=%s", settings.lemma_pod_id)
             except Exception as e:
                 logger.warning("Failed to initialize core Lemma Pod client: %s", e)
+
+        client = None
+        collection = None
+        ef = None
+
+        # Only initialize ChromaDB immediately if Lemma is NOT active
+        if lemma_pod is None:
+            def _init_chroma():
+                import chromadb
+                from chromadb.utils import embedding_functions
+
+                Path(settings.chroma_persist_dir).mkdir(parents=True, exist_ok=True)
+                c_client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
+                c_ef = embedding_functions.SentenceTransformerEmbeddingFunction(
+                    model_name="all-MiniLM-L6-v2"
+                )
+                c_collection = c_client.get_or_create_collection(
+                    name="document_chunks",
+                    embedding_function=c_ef,
+                    metadata={"hnsw:space": "cosine"},
+                )
+                return c_client, c_collection, c_ef
+
+            logger.info("Lemma is not active. Initializing ChromaDB and sentence-transformers on startup...")
+            client, collection, ef = await loop.run_in_executor(_executor, _init_chroma)
+        else:
+            logger.info("Lemma is active. Local ChromaDB initialization deferred (lazy load).")
 
         logger.info("DocumentStore initialised (chroma_dir=%s)", settings.chroma_persist_dir)
         return cls(client, collection, ef, lemma_pod=lemma_pod)
@@ -379,6 +409,7 @@ class DocumentStore:
         if not chunks:
             return
 
+        self._ensure_chroma_initialized()
         self._collection.add(
             ids=[c.chunk_id for c in chunks],
             documents=[c.text for c in chunks],
@@ -471,6 +502,7 @@ class DocumentStore:
         n_results: int,
     ) -> list[dict]:
         """Synchronous ChromaDB query (runs in thread pool)."""
+        self._ensure_chroma_initialized()
         result = self._collection.query(
             query_texts=[query],
             n_results=n_results,
@@ -540,6 +572,7 @@ class DocumentStore:
         )
 
     def _get_all_chunks_sync(self, document_id: str) -> list[dict]:
+        self._ensure_chroma_initialized()
         result = self._collection.get(
             where={"document_id": {"$eq": document_id}},
             include=["documents", "metadatas"],
@@ -583,6 +616,7 @@ class DocumentStore:
         )
 
     def _doc_exists_sync(self, document_id: str) -> bool:
+        self._ensure_chroma_initialized()
         result = self._collection.get(
             where={"document_id": {"$eq": document_id}},
             limit=1,
